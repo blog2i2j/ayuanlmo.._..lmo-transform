@@ -115,7 +115,7 @@ function ResourceItem(props: ResourceItemProps): React.JSX.Element {
         getTypeOptions();
         dispatch(setSelectedFileOutputType({
             index: index,
-            type: ''
+            type: 'mp4'
         }));
     }, []);
 
