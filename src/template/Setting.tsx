@@ -1,7 +1,7 @@
 import * as React from "react";
+import {useEffect, useState} from "react";
 import * as Electron from 'electron';
 import * as Components from '../components';
-import {useEffect, useState} from "react";
 import {useDispatch, useSelector} from "react-redux";
 import {RootState} from "../lib/Store";
 import {setConfig, setOutputPath, setParallelTasksLen} from "../lib/Store/AppState";
@@ -26,6 +26,8 @@ function Setting(): React.JSX.Element {
     const [playerType, setPlayerType] = useState<PlayerTypes>(LocalConfig.player);
     const [windowsMediaPlayerPath, setWindowsMediaPlayerPath] = useState<string>(LocalConfig.windows_media_player_local_path);
     const [vlcMediaPlayerPath, setVlcMediaPlayerPath] = useState<string>(LocalConfig.vlc_media_player_local_path);
+    const [codecMethod, setCodecMethod] = useState<string>(LocalConfig.codec_method);
+    const [codecType, setCodecType] = useState<string>(LocalConfig.codec_type);
 
     useEffect((): void => {
         setSelectOutputPath(outputPath);
@@ -61,7 +63,9 @@ function Setting(): React.JSX.Element {
             player: playerType,
             windows_media_player_local_path: windowsMediaPlayerPath,
             vlc_media_player_local_path: vlcMediaPlayerPath,
-            output_path: selectOutputPath
+            output_path: selectOutputPath,
+            codec_method: codecMethod,
+            codec_type: codecType
         } as DefaultUserConfig));
     }
 
@@ -76,7 +80,7 @@ function Setting(): React.JSX.Element {
                 </span>
             </button>
             {
-                showDialog ? <Components.Dialog height={310} onConfirm={saveConfig} onCancel={(): void => {
+                showDialog ? <Components.Dialog height={440} onConfirm={saveConfig} onCancel={(): void => {
                     serShowDialogState(!showDialog);
                 }} show={showDialog} title={'设置'}>
                     <div className={'lmo-app-setting'}>
@@ -121,6 +125,48 @@ function Setting(): React.JSX.Element {
                                 </select>
                             </div>
                         </div>
+                        <div className={'lmo-app-setting-item'}>
+                            <div className={'lmo-app-setting-item-label lmo_color_white'}>编解码方式</div>
+                            <div className={'lmo-app-setting-item-content'}>
+                                <select
+                                    value={codecMethod}
+                                    className={'lmo_cursor_pointer'}
+                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>): void => {
+                                        setCodecMethod(e.target.value);
+                                    }}>
+                                    <option value="CPU">CPU (软解)</option>
+                                    <option value="GPU">GPU (硬解)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <Components.YExtendTemplate show={codecMethod === 'GPU'}>
+                            <>
+                                <div className={'lmo-app-setting-item'} style={{
+                                    paddingBottom: '0'
+                                }}>
+                                    <div className={'lmo-app-setting-item-label lmo_color_white'}>硬件解码方法</div>
+                                    <div className={'lmo-app-setting-item-content'}>
+                                        <select
+                                            value={codecType}
+                                            className={'lmo_cursor_pointer'}
+                                            onChange={(e: React.ChangeEvent<HTMLSelectElement>): void => {
+                                                setCodecType(e.target.value);
+                                            }}>
+                                            <option value="nvenc">NVIDIA (nvenc)</option>
+                                            <option value="amf">AMD (amf)</option>
+                                            <option value="qsv">Intel (qsv)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style={{
+                                    width: '100%',
+                                    textAlign: 'right',
+                                    color: 'red',
+                                    fontSize: '12px'
+                                }} className={'lmo-app-setting-item-tips'}>请确保您的硬件支持该解码方式且驱动正常，如果遇到错误，请选择CPU作为解码方式。
+                                </div>
+                            </>
+                        </Components.YExtendTemplate>
                         <Components.YExtendTemplate show={playerType !== 'ffplay'}>
                             <div className={'lmo-app-setting-item'}>
                                 <div className={'lmo-app-setting-item-label lmo_color_white'}>播放器路径</div>

@@ -11,6 +11,8 @@ interface DefaultUserConfig {
     use_hardware_acceleration: boolean;
     player: PlayerTypes,
     vlc_media_player_local_path: string;
+    codec_method: 'CPU' | 'GPU';
+    codec_type: 'nvenc' | 'amf' | 'qsv';
     windows_media_player_local_path: string;
 }
 
@@ -20,6 +22,8 @@ const defaultUserConfig: DefaultUserConfig = {
     use_hardware_acceleration: false, // 使用硬件加速
     player: 'ffplay', // 播放器类型
     vlc_media_player_local_path: '', // vlc播放器路径
+    codec_method: 'CPU',
+    codec_type: 'nvenc',
     windows_media_player_local_path: 'C:/Program Files (x86)/Windows Media Player/wmplayer.exe' // Windows media player路径
 } as const;
 
@@ -51,7 +55,7 @@ namespace UsrLocalConfig {
         config.map((i): void => {
             data[i.key] = i.data;
         });
-        
+
         writeFileSync(AppConfigFilePath, WinIni.stringify(data));
     }
 

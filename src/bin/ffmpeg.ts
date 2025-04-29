@@ -48,6 +48,10 @@ export interface FfmpegCall {
     run(): void; // 开始
     exec(): void; // 开始
     kill(p?: string): void; // 杀死ffmpeg进程
+    videoCodec(name: string): void;
+
+    addOptions(data: Array<any>): void;
+
     screenshots: (d: {
         count: number;
         timestamps: string | Array<string>;

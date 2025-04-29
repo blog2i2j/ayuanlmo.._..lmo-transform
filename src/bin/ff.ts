@@ -9,6 +9,7 @@ import Global from "../lib/Global";
 import Store from "../lib/Store";
 import {pushLog} from "../lib/Store/AppState";
 import * as  Path from "path";
+import UsrLocalConfig from "../lib/UsrLocalConfig";
 
 const path = Global.requireNodeModule<typeof Path>('path');
 
@@ -162,6 +163,11 @@ export const transformVideo = (data: any, callback: Function, opt_path: string):
     const inputFile: string = data.path;
     const libs: string = data.output.libs;
     const outputPath: string = opt_path;
+    const conf = UsrLocalConfig.getLocalUserConf();
+    const useGPU: boolean = conf.codec_method === 'GPU';
+    const gpuCode = conf.codec_type;
+    let isH264: boolean = data.output.libs?.includes('264');
+    let isH265: boolean = data.output.libs?.includes('265');
 
     return new Promise((resolve, reject) => {
         const baseName = path.basename(data.path);
@@ -171,10 +177,27 @@ export const transformVideo = (data: any, callback: Function, opt_path: string):
         let current: number = 0;
         const _ffmpeg = ffmpeg(inputFile);
 
-        if (libs !== '' && libs !== undefined)
-            _ffmpeg.outputOptions(libs);
-
         _ffmpeg.output(optFile);
+        if (useGPU) {
+            let baseCodec = null;
+
+            if (isH264) baseCodec = 'h264';
+            else if (isH265) baseCodec = 'hevc';
+
+            if (baseCodec && ['amf', 'qsv', 'nvenc'].includes(gpuCode)) {
+                _ffmpeg.videoCodec(`${baseCodec}_${gpuCode}`);
+                _ffmpeg.addOptions([
+                    '-rc', 'cqp',
+                    '-qp', '100'
+                ]);
+            }
+        } else if (libs !== '' && libs !== undefined) {
+            _ffmpeg.outputOptions(libs);
+            _ffmpeg.addOptions([
+                '-crf', '18'
+            ]);
+        }
+
         _ffmpeg.on('end', function () {
             playBeep();
             callback({
