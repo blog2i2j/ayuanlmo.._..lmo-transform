@@ -108,15 +108,17 @@ function ResourceItem(props: ResourceItemProps): React.JSX.Element {
             })
         }
         setOptTypeOptions(type);
+
+        dispatch(setSelectedFileOutputType({
+            index: index,
+            type: type[0].name,
+            libs: type[0].libs
+        }));
         return type;
     }
 
     useEffect((): void => {
         getTypeOptions();
-        dispatch(setSelectedFileOutputType({
-            index: index,
-            type: ''
-        }));
     }, []);
 
     useEffect((): void => {
@@ -143,8 +145,7 @@ function ResourceItem(props: ResourceItemProps): React.JSX.Element {
                             Player.usePlayerToPlay(info.path);
                         }}>
                         {
-                            isAudio ? <img src={require('../static/svg/audio.svg').default} alt={'icon'}/> : isVideo ?
-                                <img src={info.cover} alt={info.cover}/> : <></>
+                            <img src={info.cover} alt={info.cover}/>
                         }
                         <div ref={scheduleRef}
                              className={'lmo-app-resource-item-content-in-info-bg'}></div>

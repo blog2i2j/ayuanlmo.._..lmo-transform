@@ -1,5 +1,5 @@
 import AppConfig from "../conf/AppConfig";
-import {Ffmpeg, FFPLAY_BIN_PATH} from "./ffmpeg";
+import {Ffmpeg, FFMPEG_BIN_PATH, FFPLAY_BIN_PATH} from "./ffmpeg";
 import {FIRST_FRAME_ERROR, PLAYER_ERROR, TRANSFORM_ERROR} from "../const/Message";
 import {playBeep} from "../utils";
 import * as FS from 'fs';
@@ -8,6 +8,11 @@ import * as ChildProcess from 'child_process';
 import Global from "../lib/Global";
 import Store from "../lib/Store";
 import {pushLog} from "../lib/Store/AppState";
+import * as  Path from "path";
+import UsrLocalConfig from "../lib/UsrLocalConfig";
+
+const path = Global.requireNodeModule<typeof Path>('path');
+const cp = Global.requireNodeModule<typeof ChildProcess>('child_process');
 
 export interface FfmpegStreamsTypes {
     avg_frame_rate: string;// 帧速率
@@ -81,17 +86,19 @@ const {ipcRenderer} = Global.requireNodeModule<typeof Electron>('electron');
 const child_process = Global.requireNodeModule<typeof ChildProcess>('child_process');
 
 /**
- * @method getVideoFirstFrame
+ * @method getMediaFirstFrame
  * @param {string} inputFilePath - 文件路径
+ * @param type
  * @returns {Promise<string>} - 第一帧路径
  * @author ayuanlmo
  * @description 获取视频第一帧
  * **/
-export const getVideoFirstFrame = (inputFilePath: string): Promise<string> => {
+export const getMediaFirstFrame = (inputFilePath: string, type = 'video'): Promise<string> => {
     return new Promise((resolve, reject) => {
         const ffmpeg: Ffmpeg = Global.requireNodeModule<Ffmpeg>('fluent-ffmpeg');
         const tmpPath: string = `${AppConfig.system.tempPath}${AppConfig.appName}`;
         const fileName: string = `lmo-tmp-${new Date().getTime()}.y.png`;
+        const optPath = `${tmpPath}/tmp`;
 
         // 可能会存在文件还未正常写入磁盘，导致的页面无显示问题
         // 所以这里放一个侦听器，让页面等待这个侦听器
@@ -100,24 +107,42 @@ export const getVideoFirstFrame = (inputFilePath: string): Promise<string> => {
             resolve(`${tmpPath}/tmp/${name}`);
         });
 
-        ffmpeg(inputFilePath).screenshots({
-            count: 1,
-            timestamps: ['1%', '00:00:00'],
-            filename: fileName,
-            folder: `${tmpPath}/tmp`,
-            size: '230x130'
-        }).on('end', function (e: any) {
-            if (e) {
-                ipcRenderer.send('SHOW-ERROR-MESSAGE-BOX', {
-                    msg: FIRST_FRAME_ERROR(inputFilePath, e.toString())
-                });
-                Store.dispatch(pushLog(`[${inputFilePath}]:${e.toString()}`));
-                console.log('生成首帧图错误', e);
-            }
 
-        }).on('error', function (e: any): void {
-            reject({err: true, msg: e, file: inputFilePath});
-        })
+        if(type === 'audio'){
+            const args: string[] = [
+                '-i',
+                inputFilePath,
+                '-filter_complex',
+                'showwavespic=s=230x130:colors=#407DF2',
+                '-frames:v', '1',
+                optPath + `/${fileName}`,
+                '-y'
+            ];
+            const ffmpegProcess = cp.spawn(FFMPEG_BIN_PATH ?? '', args);
+            ffmpegProcess.on('exit', (code: number | null): void => {
+                if (code === 0)
+                    resolve(optPath + `/${fileName}`);
+            });
+        }else if(type === 'video'){
+            ffmpeg(inputFilePath).screenshots({
+                count: 1,
+                timestamps: ['1%', '00:00:00'],
+                filename: fileName,
+                folder: optPath,
+                size: '230x130'
+            }).on('end', function (e: any) {
+                if (e) {
+                    ipcRenderer.send('SHOW-ERROR-MESSAGE-BOX', {
+                        msg: FIRST_FRAME_ERROR(inputFilePath, e.toString())
+                    });
+                    Store.dispatch(pushLog(`[${inputFilePath}]:${e.toString()}`));
+                    console.log('生成首帧图错误', e);
+                }
+
+            }).on('error', function (e: any): void {
+                reject({err: true, msg: e, file: inputFilePath});
+            });
+        }
     })
 }
 
@@ -159,17 +184,41 @@ export const transformVideo = (data: any, callback: Function, opt_path: string):
     const inputFile: string = data.path;
     const libs: string = data.output.libs;
     const outputPath: string = opt_path;
+    const conf = UsrLocalConfig.getLocalUserConf();
+    const useGPU: boolean = conf.codec_method === 'GPU';
+    const gpuCode = conf.codec_type;
+    let isH264: boolean = data.output.libs?.includes('264');
+    let isH265: boolean = data.output.libs?.includes('265');
 
     return new Promise((resolve, reject) => {
-        const optFile: string = outputPath + "\\" + `lmo-opt-${new Date().getTime()}` + '.' + data.output.type.toLowerCase();
+        const baseName = path.basename(data.path);
+        const extName = path.extname(data.path);
+        const optFile: string = outputPath + "\\" + `${baseName.replace(extName, '')}` + '.' + data.output.type.toLowerCase();
         const duration: number = parseFloat(data.duration);
         let current: number = 0;
         const _ffmpeg = ffmpeg(inputFile);
 
-        if (libs !== '' && libs !== undefined)
-            _ffmpeg.outputOptions(libs);
-
         _ffmpeg.output(optFile);
+        if (useGPU) {
+            let baseCodec = null;
+
+            if (isH264) baseCodec = 'h264';
+            else if (isH265) baseCodec = 'hevc';
+
+            if (baseCodec && ['amf', 'qsv', 'nvenc'].includes(gpuCode)) {
+                _ffmpeg.videoCodec(`${baseCodec}_${gpuCode}`);
+                _ffmpeg.addOptions([
+                    '-rc', 'cqp',
+                    '-qp', '100'
+                ]);
+            }
+        } else if (libs !== '' && libs !== undefined) {
+            _ffmpeg.outputOptions(libs);
+            _ffmpeg.addOptions([
+                '-crf', '18'
+            ]);
+        }
+
         _ffmpeg.on('end', function () {
             playBeep();
             callback({

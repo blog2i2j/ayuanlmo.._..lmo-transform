@@ -186,12 +186,11 @@ button {
 
 .lmo-app-resource-item-content-in-info-bg {
     width: 230px;
-    height: 130px;
+    height: 6px;
     position: absolute;
-    background: #00000066;
-    top: 0;
+    background: #229EED;
+    bottom: 0;
     z-index: 4;
-    border-radius: 10px;
     transition: all .2s;
     transform: translate3d(-230px, 0px, 0px);
 }

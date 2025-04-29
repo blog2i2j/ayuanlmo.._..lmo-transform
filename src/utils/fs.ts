@@ -1,4 +1,4 @@
-import {FfmpegStreamsTypes, getFileInfo, GetFileInfoTypes, getVideoFirstFrame} from "../bin/ff";
+import {FfmpegStreamsTypes, getFileInfo, GetFileInfoTypes, getMediaFirstFrame} from "../bin/ff";
 import {ResolvePath} from "./index";
 import AppConfig from "../conf/AppConfig";
 import store from '../lib/Store/index'
@@ -56,8 +56,9 @@ export function targetIs(info: GetFileInfoTypes | ResourceInfoTypes, type: "vide
         // 存在宽度和高度信息，或者媒体类型中包含 video
         return !!(info.width && info.height) || ("type" in info && info.type.includes('video'));
     } else if (type === 'audio') {
+        const audioTrackVideoTypes = ['mjpeg', 'png'];
         // 是否存在非mjpeg的视频轨道（带有封面图的音频文件存在一个或多个mjpeg的轨道，但是他的轨道类型为video，需要排除掉）
-        const hasMjpegVideoTrack: boolean = streams.some((i: FfmpegStreamsTypes): boolean => i.codec_type === 'video' && i.codec_name !== 'mjpeg');
+        const hasMjpegVideoTrack: boolean = streams.some((i: FfmpegStreamsTypes): boolean => i.codec_type === 'video' && !audioTrackVideoTypes.includes(i.codec_name));
         // 检查是否存在音频轨道
         const hasAudioTrack: boolean = streams.some((i: FfmpegStreamsTypes): boolean => i.codec_type === 'audio');
 
@@ -76,6 +77,7 @@ const resolveFile = async (files: Array<Root.File>): Promise<any[]> => {
 
         await getFileInfo(filePath).then(async (fileInfo: GetFileInfoTypes) => {
             const isVideo: boolean = targetIs(fileInfo, 'video');
+            const isAudio: boolean = targetIs(fileInfo, 'audio');
 
             try {
                 if (files[j].type !== '')
@@ -83,7 +85,7 @@ const resolveFile = async (files: Array<Root.File>): Promise<any[]> => {
                         name: files[j].name,
                         path: ResolvePath(files[j].path),
                         type: files[j].type,
-                        cover: File.isImageFile(filePath) ? filePath : isVideo ? await getVideoFirstFrame(filePath) : '',
+                        cover: File.isImageFile(filePath) ? filePath : isVideo ? await getMediaFirstFrame(filePath) : isAudio ? await getMediaFirstFrame(filePath, 'audio') : '',
                         lastModified: files[j].lastModified,
                         ...fileInfo,
                         output: {
@@ -123,7 +125,7 @@ const resolveUrlFile = async (urls: Array<string>): Promise<any> => {
                     name: file,
                     path: file,
                     type: '',
-                    cover: File.isImageFile(file) ? file : isVideo ? await getVideoFirstFrame(file) : '',
+                    cover: File.isImageFile(file) ? file : isVideo ? await getMediaFirstFrame(file) : await getMediaFirstFrame(file, 'audio'),
                     lastModified: '',
                     ...fileInfo,
                     output: {
@@ -178,7 +180,6 @@ const DeleteTmpFile = (file: string = '') => {
             else
                 fs.unlinkSync(_tmp);
         });
-        ipcRenderer.send('SHOW-INFO-MESSAGE-BOX', '删除完成');
     }
 }
 
