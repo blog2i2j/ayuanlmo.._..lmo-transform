@@ -202,11 +202,13 @@ function Setting(): React.JSX.Element {
                                 >
                                     {tmpFileSize > 1024 ? (tmpFileSize / 1024).toFixed(2) + 'M' : tmpFileSize + 'KB'}
                                 </span>
-                                <button onClick={(): void => {
-                                    DeleteTmpFile();
-                                    initTmpFileSize();
-                                }} className={'lmo_color_white lmo_cursor_pointer'}>删除
-                                </button>
+                                <Components.YExtendTemplate show={tmpFileSize > 0}>
+                                    <button onClick={(): void => {
+                                        DeleteTmpFile();
+                                        initTmpFileSize();
+                                    }} className={'lmo_color_white lmo_cursor_pointer'}>删除
+                                    </button>
+                                </Components.YExtendTemplate>
                             </div>
                         </div>
                         <div className={'lmo-app-setting-item'}>

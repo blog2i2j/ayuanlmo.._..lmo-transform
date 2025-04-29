@@ -180,7 +180,6 @@ const DeleteTmpFile = (file: string = '') => {
             else
                 fs.unlinkSync(_tmp);
         });
-        ipcRenderer.send('SHOW-INFO-MESSAGE-BOX', '删除完成');
     }
 }
 
