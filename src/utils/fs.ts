@@ -56,8 +56,9 @@ export function targetIs(info: GetFileInfoTypes | ResourceInfoTypes, type: "vide
         // 存在宽度和高度信息，或者媒体类型中包含 video
         return !!(info.width && info.height) || ("type" in info && info.type.includes('video'));
     } else if (type === 'audio') {
+        const audioTrackVideoTypes = ['mjpeg', 'png'];
         // 是否存在非mjpeg的视频轨道（带有封面图的音频文件存在一个或多个mjpeg的轨道，但是他的轨道类型为video，需要排除掉）
-        const hasMjpegVideoTrack: boolean = streams.some((i: FfmpegStreamsTypes): boolean => i.codec_type === 'video' && i.codec_name !== 'mjpeg');
+        const hasMjpegVideoTrack: boolean = streams.some((i: FfmpegStreamsTypes): boolean => i.codec_type === 'video' && !audioTrackVideoTypes.includes(i.codec_name));
         // 检查是否存在音频轨道
         const hasAudioTrack: boolean = streams.some((i: FfmpegStreamsTypes): boolean => i.codec_type === 'audio');
 
