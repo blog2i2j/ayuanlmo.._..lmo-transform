@@ -145,8 +145,7 @@ function ResourceItem(props: ResourceItemProps): React.JSX.Element {
                             Player.usePlayerToPlay(info.path);
                         }}>
                         {
-                            isAudio ? <img src={require('../static/svg/audio.svg').default} alt={'icon'}/> : isVideo ?
-                                <img src={info.cover} alt={info.cover}/> : <></>
+                            <img src={info.cover} alt={info.cover}/>
                         }
                         <div ref={scheduleRef}
                              className={'lmo-app-resource-item-content-in-info-bg'}></div>

@@ -1,4 +1,4 @@
-import {FfmpegStreamsTypes, getFileInfo, GetFileInfoTypes, getVideoFirstFrame} from "../bin/ff";
+import {FfmpegStreamsTypes, getFileInfo, GetFileInfoTypes, getMediaFirstFrame} from "../bin/ff";
 import {ResolvePath} from "./index";
 import AppConfig from "../conf/AppConfig";
 import store from '../lib/Store/index'
@@ -77,6 +77,7 @@ const resolveFile = async (files: Array<Root.File>): Promise<any[]> => {
 
         await getFileInfo(filePath).then(async (fileInfo: GetFileInfoTypes) => {
             const isVideo: boolean = targetIs(fileInfo, 'video');
+            const isAudio: boolean = targetIs(fileInfo, 'audio');
 
             try {
                 if (files[j].type !== '')
@@ -84,7 +85,7 @@ const resolveFile = async (files: Array<Root.File>): Promise<any[]> => {
                         name: files[j].name,
                         path: ResolvePath(files[j].path),
                         type: files[j].type,
-                        cover: File.isImageFile(filePath) ? filePath : isVideo ? await getVideoFirstFrame(filePath) : '',
+                        cover: File.isImageFile(filePath) ? filePath : isVideo ? await getMediaFirstFrame(filePath) : isAudio ? await getMediaFirstFrame(filePath, 'audio') : '',
                         lastModified: files[j].lastModified,
                         ...fileInfo,
                         output: {
@@ -124,7 +125,7 @@ const resolveUrlFile = async (urls: Array<string>): Promise<any> => {
                     name: file,
                     path: file,
                     type: '',
-                    cover: File.isImageFile(file) ? file : isVideo ? await getVideoFirstFrame(file) : '',
+                    cover: File.isImageFile(file) ? file : isVideo ? await getMediaFirstFrame(file) : await getMediaFirstFrame(file, 'audio'),
                     lastModified: '',
                     ...fileInfo,
                     output: {
